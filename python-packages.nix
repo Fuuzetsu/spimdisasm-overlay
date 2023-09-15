@@ -20,10 +20,10 @@ self: super: {
   };
   "spimdisasm" = super.buildPythonPackage rec {
     pname = "spimdisasm";
-    version = "1.17.0";
+    version = "1.17.1";
     src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/06/1f/396f1293bd70e21fdb128c1d35f2f6c8c57724d6577485f28afbfb0f50bb/spimdisasm-1.17.0-py3-none-any.whl";
-      sha256 = "1214j25ippfz7119mqilrm3i1yl3ggjy4xwmg9vf9sad58dpwr5i";
+      url = "https://files.pythonhosted.org/packages/e7/13/e047bf21cd78020acce2af8dab60f448c2904a37d860d2452e7896487152/spimdisasm-1.17.1-py3-none-any.whl";
+      sha256 = "16jnyxwqvp4159i19hxfbv2iynacd7qwsvsbs5qnsf377qp13x1w";
     };
     format = "wheel";
     doCheck = false;
