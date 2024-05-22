@@ -6,10 +6,10 @@
 self: super: {
   "rabbitizer" = super.buildPythonPackage rec {
     pname = "rabbitizer";
-    version = "1.10.0";
+    version = "1.11.0";
     src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/61/4a/b05dd3c847915d71de8b204bdc5ca77f34aadf897deaaea7f60d30fc28be/rabbitizer-1.10.0.tar.gz";
-      sha256 = "1xzp4np7qip8iysws65gz91ldcsq8j8q36l7zxdvv83v5gqhh8is";
+      url = "https://files.pythonhosted.org/packages/7f/7f/d02f3f3af85735933085d35c4f8f9008fe6caa3d312f8f18f1d60572ce4b/rabbitizer-1.11.0.tar.gz";
+      sha256 = "15fcvlviy3d65j6w4m5l8dvl71rci8j8qkacggmbywy0rdrs399p";
     };
     format = "setuptools";
     doCheck = false;
