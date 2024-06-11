@@ -101,11 +101,11 @@
     "spimdisasm": {
       "flake": false,
       "locked": {
-        "lastModified": 1716326468,
-        "narHash": "sha256-lBZiLwlRNUyly7Akk8GLYQIOPAqGkl8krr9HZNrEJB4=",
+        "lastModified": 1718118075,
+        "narHash": "sha256-cJ4Q1NNs1CeppAOblrpP60u32WJL9rNFngvWCworjYY=",
         "owner": "Decompollaborate",
         "repo": "spimdisasm",
-        "rev": "e3e348189014583a947a1378552f7880521ae31a",
+        "rev": "c1a7798596c03c9d298ea94a2f60e6155aa9f3db",
         "type": "github"
       },
       "original": {
