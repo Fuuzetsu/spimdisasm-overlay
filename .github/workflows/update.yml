@@ -3,13 +3,26 @@ name: Update every hour
 on:
   schedule:
     - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: cachix/install-nix-action@v20
+      # GitHub disables scheduled workflows after 60 days without repository
+      # activity, which happens whenever upstream spimdisasm goes quiet for a
+      # while (this repo only gets commits when spimdisasm updates).
+      # Re-enabling the workflow via the API on every run resets that timer.
+      - name: Keep scheduled workflow enabled
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/update.yml/enable"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update spimdisasm and dependencies
@@ -29,6 +42,4 @@ jobs:
           nix flake check
       - name: Push changes
         if: steps.git-check.outputs.changes == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        run: git push

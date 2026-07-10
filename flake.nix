@@ -6,18 +6,24 @@
       type = "github";
       owner = "NixOS";
       repo = "nixpkgs";
-      ref = "22.11";
+      ref = "nixos-26.05";
     };
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
     };
-    pip2nix = {
-      url = "github:nix-community/pip2nix";
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     spimdisasm = {
       url = "github:Decompollaborate/spimdisasm";
+      flake = false;
+    };
+    # spimdisasm's one compiled dependency; it is not packaged in nixpkgs,
+    # so we build it from source and track it alongside spimdisasm itself.
+    rabbitizer = {
+      url = "github:Decompollaborate/rabbitizer";
       flake = false;
     };
   };
@@ -28,7 +34,8 @@
     , flake-utils
     , flake-compat
     , spimdisasm
-    , pip2nix
+    , pyproject-nix
+    , rabbitizer
     }:
     let
       outputs = flake-utils.lib.eachDefaultSystem
@@ -36,39 +43,52 @@
           let
             pkgs = import nixpkgs {
               inherit system;
-              overlays = [
+            };
 
-              ];
+            python = pkgs.python3.override {
+              packageOverrides = self: _super: {
+                rabbitizer = self.buildPythonPackage {
+                  pname = "rabbitizer";
+                  version = (builtins.fromTOML
+                    (builtins.readFile "${inputs.rabbitizer}/pyproject.toml")).project.version;
+                  pyproject = true;
+                  src = inputs.rabbitizer;
+                  build-system = [ self.setuptools self.wheel ];
+                };
+              };
             };
 
             spimdisasm =
               let
-                packageOverrides = pkgs.callPackage ./python-packages.nix { };
-                python = pkgs.python3.override { inherit packageOverrides; };
-                dependencyNames = pkgs.lib.attrsets.attrNames (packageOverrides null null);
-                spimdisasmPython = python.withPackages (ps: builtins.map (n: ps."${n}") dependencyNames);
+                # spimdisasm declares its dependencies dynamically via
+                # requirements.txt; pyproject.nix parses it at eval time and
+                # resolves the names from the python package set, so
+                # dependency changes upstream are picked up automatically.
+                deps = pyproject-nix.lib.project.loadRequirementsTxt {
+                  requirements = "${inputs.spimdisasm}/requirements.txt";
+                };
               in
-              pkgs.writeShellScriptBin "spimdisasm" ''
-                ${spimdisasmPython}/bin/python ${inputs.spimdisasm}/spimdisasm "$@"
-              '';
+              python.pkgs.buildPythonApplication {
+                pname = "spimdisasm";
+                version = (builtins.fromTOML
+                  (builtins.readFile "${inputs.spimdisasm}/pyproject.toml")).project.version;
+                pyproject = true;
+                src = inputs.spimdisasm;
+                build-system = [ python.pkgs.setuptools python.pkgs.wheel ];
+                # Upstream lists twine (a release tool) in build-system
+                # requires; skip the check instead of pulling it into the
+                # build.
+                pypaBuildFlags = [ "--skip-dependency-check" ];
+                dependencies =
+                  (deps.renderers.withPackages { inherit python; }) python.pkgs;
+                pythonImportsCheck = [ "spimdisasm" ];
+              };
 
             # Update script for this repo.
-            #
-            # I thought I was supposed to be able to do
-            # inputs.pip2nix.defaultPackages.${system} and get pip2nix via flake but
-            # it's crying about something I don't understand so we're doing this weird
-            # thing...
-
             update-spimdisasm = pkgs.writeShellScriptBin "update-spimdisasm" ''
-              ${pkgs.nix}/bin/nix flake lock --update-input spimdisasm \
+              ${pkgs.nix}/bin/nix flake update spimdisasm rabbitizer \
                   --extra-experimental-features nix-command \
                   --extra-experimental-features flakes
-              nix run \
-                  --extra-experimental-features nix-command \
-                  --extra-experimental-features flakes \
-                  ${inputs.pip2nix}# -- \
-                  generate -r ${inputs.spimdisasm}/requirements.txt \
-                  -e spimdisasm
             '';
           in
           rec
@@ -80,7 +100,11 @@
                 inherit spimdisasm update-spimdisasm;
               };
             checks = {
-              spimdisasm-builds = packages.spimdisasm;
+              # Actually run spimdisasm so updates that break it (new
+              # dependencies, python incompatibilities, ...) fail the check.
+              spimdisasm-runs = pkgs.runCommand "spimdisasm-runs" { } ''
+                ${packages.spimdisasm}/bin/spimdisasm --help > $out
+              '';
             };
           });
     in
@@ -90,8 +114,4 @@
         spimdisasm = outputs.packages.${final.system}.spimdisasm;
       };
     };
-
-
-
-
 }
